@@ -1,0 +1,5 @@
+/read
+spaces/cache/
+*.db
+*.db-wal
+*.db-shm

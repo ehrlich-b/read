@@ -1,0 +1,62 @@
+{{define "title"}}about - read.ehrlich.dev{{end}}
+{{define "head"}}
+<style>
+.about-header{margin-bottom:24px}
+.about-header h1{font-size:20px;font-weight:700;letter-spacing:-0.02em}
+.about-header p{font-size:13px;color:var(--text-dim);margin-top:6px;line-height:1.6;max-width:600px}
+.about-header .stat{font-family:var(--mono);color:var(--text);font-weight:600}
+.feed-sections{display:flex;flex-direction:column;gap:20px}
+.feed-section{border:1px solid rgba(255,255,255,0.06);border-radius:6px;overflow:hidden}
+.feed-section summary{font-size:14px;font-weight:600;padding:10px 14px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;background:var(--bg-card)}
+.feed-section summary::-webkit-details-marker{display:none}
+.feed-section summary::before{content:'\25B6';font-size:9px;color:var(--text-dim);transition:transform 0.15s}
+.feed-section[open] summary::before{transform:rotate(90deg)}
+.feed-section summary .count{font-size:11px;color:var(--text-dim);font-family:var(--mono);font-weight:400;margin-left:auto}
+.feed-groups{padding:4px 14px 14px}
+.feed-group{margin-top:10px}
+.feed-group h3{font-size:12px;font-family:var(--mono);color:var(--action);margin-bottom:4px}
+.feed-group h3 a{color:var(--action);text-decoration:none}
+.feed-group h3 a:hover{text-decoration:underline}
+.feed-list-about{list-style:none}
+.feed-list-about li{font-size:12px;padding:3px 0;display:flex;gap:8px;align-items:baseline;border-bottom:1px solid rgba(255,255,255,0.03)}
+.feed-list-about li:last-child{border-bottom:none}
+.feed-list-about .feed-url{color:var(--text-dim);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px;flex-shrink:0}
+.feed-list-about .feed-url a{color:var(--text-dim);text-decoration:none}
+.feed-list-about .feed-url a:hover{color:var(--text)}
+.feed-list-about .feed-desc{color:var(--text);font-size:12px}
+@media(max-width:700px){
+  .feed-list-about li{flex-direction:column;gap:1px}
+  .feed-list-about .feed-url{max-width:100%;font-size:11px}
+  .feed-list-about .feed-desc{font-size:11px;color:var(--text-dim)}
+}
+</style>
+{{end}}
+{{define "content"}}
+<div class="about-header">
+<h1>about</h1>
+<p>read.ehrlich.dev is an AI-curated RSS reader. Articles are fetched from <span class="stat">{{.TotalFeeds}}</span> RSS feeds, compressed and scored by Claude, embedded for semantic similarity, and assigned to topic spaces. No human curation — the AI reads everything so you don't have to.</p>
+<p style="margin-top:8px"><a href="/w/all">&larr; back to feed</a></p>
+</div>
+<div class="feed-sections">
+{{range .Sections}}
+<details class="feed-section">
+<summary>{{.Name}}<span class="count">{{range $i, $g := .Groups}}{{if $i}} · {{end}}{{$g.Slug}}{{end}}</span></summary>
+<div class="feed-groups">
+{{range .Groups}}
+<div class="feed-group">
+<h3><a href="/w/{{.Slug}}">{{.Slug}}</a></h3>
+<ul class="feed-list-about">
+{{range .Entries}}
+<li>
+<span class="feed-url"><a href="{{.URL}}" target="_blank" rel="noopener">{{.URL}}</a></span>
+{{if .Description}}<span class="feed-desc">{{.Description}}</span>{{end}}
+</li>
+{{end}}
+</ul>
+</div>
+{{end}}
+</div>
+</details>
+{{end}}
+</div>
+{{end}}
