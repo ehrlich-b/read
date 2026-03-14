@@ -18,13 +18,21 @@ import (
 var feedsMD string
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "post" {
-		postCmd(os.Args[2:])
-		return
-	}
-	if len(os.Args) > 1 && os.Args[1] == "seed" {
-		seedCmd(os.Args[2:])
-		return
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "post":
+			postCmd(os.Args[2:])
+			return
+		case "seed":
+			seedCmd(os.Args[2:])
+			return
+		case "fetch":
+			fetchCmd(os.Args[2:])
+			return
+		case "process":
+			processCmd(os.Args[2:])
+			return
+		}
 	}
 	serveCmd()
 }
