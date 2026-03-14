@@ -24,6 +24,9 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 ### operating-systems
 - https://bits.debian.org/feeds/atom.xml  # Bits from Debian — official project blog
 - https://redox-os.org/news/index.xml  # Redox OS — Rust-based microkernel
+- https://lwn.net/headlines/rss  # LWN.net — in-depth Linux kernel reporting
+- https://fasterthanli.me/index.xml  # fasterthanlime — systems programming deep dives
+- https://cliffle.com/rss.xml  # Cliff Biffle — embedded systems and Rust
 
 ### containers
 - https://www.cncf.io/blog/feed  # CNCF Blog — cloud-native ecosystem hub
@@ -35,6 +38,7 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://aws.amazon.com/blogs/aws/feed/  # AWS News — largest cloud provider announcements
 - https://aws.amazon.com/blogs/architecture/feed  # AWS Architecture — cloud patterns
 - https://aws.amazon.com/blogs/devops/feed/  # AWS DevOps — infrastructure automation
+- https://blog.cloudflare.com/rss/  # Cloudflare Blog — edge network innovations
 
 ### devops
 - https://sredevops.substack.com/feed  # SRE/DevOps Newsletter — community practices
@@ -42,8 +46,6 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://devops.com/feed/  # DevOps.com — largest DevOps content collection
 - https://netflixtechblog.medium.com/feed  # Netflix Tech Blog — infrastructure at scale
 - https://thenewstack.io/feed  # The New Stack — cloud-native and DevOps journalism
-
-### ci-cd
 - https://github.blog/feed/  # GitHub Blog — Actions, Copilot, platform news
 - https://circleci.com/blog/feed.xml  # CircleCI — CI/CD pipeline insights
 
@@ -60,6 +62,7 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 
 ### shell-scripting
 - https://blog.balthazar-rouberol.com/feeds/all.atom.xml  # Balthazar Rouberol — shell and Python
+- https://effective-shell.com/feed/  # Effective Shell — shell mastery guide
 
 ### nix
 - https://nixos.org/blog/announcements-rss.xml  # NixOS Blog — official announcements
@@ -74,6 +77,8 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://fasterthanli.me/index.xml  # fasterthanlime — deep Rust and systems content
 - https://blog.yoshuawuyts.com/rss.xml  # Yoshua Wuyts — async-std and Rust ecosystem
 - https://rust-analyzer.github.io/feed.xml  # rust-analyzer — IDE tooling development
+- https://without.boats/index.xml  # without.boats — async Rust design
+- https://smallcultfollowing.com/babysteps/feed.xml  # Baby Steps (Niko Matsakis) — Rust language design
 
 ### golang
 - https://dave.cheney.net/feed  # Dave Cheney — performance and production Go
@@ -81,6 +86,9 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://golangweekly.com/rss/  # Golang Weekly — curated Go news
 - https://eli.thegreenplace.net/feeds/all.atom.xml  # Eli Bendersky — Go and compilers
 - https://bitfieldconsulting.com/posts?format=rss  # Bitfield — idiomatic Go patterns
+- https://appliedgo.net/index.xml  # Applied Go — Go tutorials for real-world topics
+- https://www.ardanlabs.com/blog/index.xml  # Ardan Labs — professional Go training and architecture
+- https://www.alexedwards.net/blog/feed  # Alex Edwards — Go web development
 
 ### python
 - https://realpython.com/atom.xml  # Real Python — professional Python education
@@ -195,6 +203,9 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://www.inference.vc/rss/  # inFERENCe — statistical inference and info theory
 
 ### algorithms
+- https://codeforces.com/blog/rss  # Codeforces Blog — competitive programming community
+- https://blog.computationalcomplexity.org/feeds/posts/default  # Computational Complexity — Fortnow and Gasarch
+- https://11011110.github.io/blog/feed.xml  # 0xDE (David Eppstein) — algorithms and graph theory
 
 ### mathematics
 - https://terrytao.wordpress.com/feed  # Terence Tao — Fields Medalist research
@@ -251,8 +262,7 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://lilianweng.github.io/index.xml  # Lil'Log — OpenAI researcher survey posts
 - https://pytorch.org/blog/feed.xml  # PyTorch Blog — deep learning framework
 - https://huggingface.co/blog/feed.xml  # Hugging Face — model hub and transformers
-
-### llm-engineering
+- https://blog.ml.cmu.edu/feed/  # CMU ML Blog — top ML program research
 - https://huyenchip.com/feed  # Chip Huyen — bridges research and production
 - https://magazine.sebastianraschka.com/feed  # Ahead of AI — expert curation
 - https://cameronrwolfe.substack.com/feed  # Deep (Learning) Focus — technical dives
@@ -262,19 +272,14 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://lastweekin.ai/feed  # Last Week in AI — practitioner summaries
 - https://simonwillison.net/atom/everything/  # Simon Willison — LLM tools and Datasette
 - https://www.latent.space/feed  # Latent Space — AI engineering podcast/blog
-
-### nlp
 - https://newsletter.maartengrootendorst.com/feed  # Exploring Language Models — hands-on guide
 - https://nlp.elvissaravia.com/feed  # AI Newsletter (Elvis Saravia) — top papers
 - https://nlpnewsletter.substack.com/feed  # NLP Newsletter — monthly digest
-- https://huggingface.co/blog/feed.xml  # Hugging Face Blog — NLP models and tools
+- https://blog.promptlayer.com/rss/  # PromptLayer — prompt engineering tools
 
 ### reinforcement-learning
 - https://blog.ml.cmu.edu/category/reinforcement-learning/feed/  # CMU ML Blog (RL) — top program
 - https://www.deepmind.com/blog/feed/  # DeepMind — AlphaGo/AlphaZero research
-
-### prompt-engineering
-- https://blog.promptlayer.com/rss/  # PromptLayer — practitioner tools
 
 ### computer-vision
 - https://blog.roboflow.com/feed  # Roboflow — detection/segmentation
@@ -294,6 +299,9 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://lilianweng.github.io/index.xml  # Lil'Log — agent architecture surveys
 
 ### bioinformatics
+- https://liorpachter.wordpress.com/feed/  # Lior Pachter — computational biology commentary
+- https://omicsomics.blogspot.com/feeds/posts/default  # Omics! Omics! — genomics and drug discovery technology
+- https://arxiv.org/rss/q-bio  # arXiv Quantitative Biology — computational biology preprints
 
 ## Security & Low-Level
 
@@ -312,8 +320,8 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://www.eff.org/rss/updates.xml  # EFF Deeplinks — digital rights
 - https://arstechnica.com/security/feed/  # Ars Technica Security — security journalism
 - https://therecord.media/feed  # The Record — cybersecurity journalism
-
-### pentesting
+- https://portswigger.net/research/rss  # PortSwigger Research — web security from Burp Suite creators
+- https://bishopfox.com/feed  # Bishop Fox — offensive security research
 - https://pentestlab.blog/feed/  # Penetration Testing Lab — exploitation techniques
 - https://pentesterlab.com/blog/feed  # PentesterLab — web app security tutorials
 - https://www.pentestpartners.com/feed/  # Pen Test Partners — elite expertise
@@ -366,6 +374,7 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://www.filfre.net/feed  # The Digital Antiquarian — canonical computing history
 - https://oldvcr.blogspot.com/feeds/posts/default  # Old VCR — Commodore and retro tech
 - https://retrocomputingforum.com/latest.rss  # Retro Computing Forum — community discussion
+- https://www.righto.com/feeds/posts/default  # Ken Shirriff — IC reverse engineering
 
 ### distributed-systems
 - https://martinkl.substack.com/feed  # Martin Kleppmann Newsletter — verification
@@ -374,6 +383,9 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://jepsen.io/blog.atom  # Jepsen — distributed database correctness
 - https://decentralizedthoughts.github.io/feed.xml  # Decentralized Thoughts — consensus research
 - https://blog.acolyer.org/feed  # The Morning Paper — CS paper summaries
+- https://www.micahlerner.com/feed.xml  # Micah Lerner — distributed systems paper reviews
+- https://www.the-paper-trail.org/feed/  # The Paper Trail — distributed systems fundamentals
+- https://arpitbhayani.me/feed.xml  # Arpit Bhayani — system design and distributed systems
 
 ## Science & Nature
 
@@ -384,19 +396,32 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 
 ### astrophysics
 - https://tritonstation.com/feed/  # Triton Station — dark matter and cosmology
+- https://astrobites.org/feed/  # Astrobites — grad students summarizing astrophysics papers
+- https://cosmosmagazine.com/feed/  # Cosmos Magazine — Australian science with strong astro coverage
 
 ### amateur-astronomy
+- https://skyandtelescope.org/astronomy-news/feed/  # Sky & Telescope — premier amateur astronomy magazine
+- https://www.astronomy.com/feed/  # Astronomy Magazine — observing guides and news
+- https://10minuteastronomy.wordpress.com/feed/  # 10 Minute Astronomy — quick observing guides
 
 ### space-exploration
 - https://www.nasaspaceflight.com/feed/  # NASASpaceflight — launch coverage
 - https://arstechnica.com/space/feed/  # Ars Technica Space — space journalism
+- https://spaceflightnow.com/feed/  # Spaceflight Now — real-time launch coverage
+- https://www.planetary.org/feed  # The Planetary Society — space advocacy and exploration
 
 ### chemistry
+- https://www.science.org/blogs/pipeline/feed  # In the Pipeline (Derek Lowe) — drug discovery and medicinal chemistry
+- https://www.compoundchem.com/feed/  # Compound Interest — everyday chemistry infographics
+- https://www.chemistryworld.com/rss  # Chemistry World — RSC magazine news
 
 ### nanotechnology
 - https://www.nanowerk.com/nwfeedcomplete.xml  # Nanowerk — nanotechnology news aggregator
 
 ### genetics
+- https://www.gnxp.com/WordPress/feed/  # Gene Expression (Razib Khan) — population genetics commentary
+- https://arxiv.org/rss/q-bio.GN  # arXiv Genomics — preprints on genomes and genetic variation
+- https://dnascience.plos.org/feed/  # PLOS DNA Science — Ricki Lewis genetics blog
 
 ### climate-science
 - https://www.carbonbrief.org/feed  # Carbon Brief — climate science authority
@@ -404,12 +429,16 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://insideclimatenews.org/feed  # Inside Climate News — Pulitzer-winning journalism
 
 ### energy
+- https://cleantechnica.com/feed/  # CleanTechnica — largest clean energy news site
+- https://arstechnica.com/science/feed/  # Ars Technica Science — energy and climate research
 
 ### neuroscience
 - https://neurosciencenews.com/feed  # Neuroscience News — daily research summaries
 - https://knowingneurons.com/feed  # Knowing Neurons — award-winning accessible blog
+- https://theness.com/neurologicablog/feed/  # NeuroLogica (Steven Novella) — clinical neuroscience and skepticism
 
 ### mycology
+- https://www.nature.com/subjects/fungi.rss  # Nature Fungi — peer-reviewed fungal biology
 
 ### ecology
 - https://www.mongabay.com/feed/  # Mongabay — environmental science reporting
@@ -459,13 +488,13 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://www.visualwilderness.com/feed/  # Visual Wilderness — landscape community
 
 ### pixel-art
-
-### generative-art
-- https://www.gorillasun.de/feed  # Gorilla Sun — generative art tutorials
-- https://mattdesl.svbtle.com/feed  # Matt DesLauriers — creative coding and gen art
+- https://lospec.com/feed.xml  # Lospec — pixel art tools, palettes, and tutorials
+- https://saint11.org/feed.xml  # Saint11 (Pedro Medeiros) — pixel art tutorial master
 
 ### creative-coding
 - https://blog.otoro.net/feed.xml  # Otoro — creative AI experiments
+- https://www.gorillasun.de/feed  # Gorilla Sun — generative art tutorials
+- https://mattdesl.svbtle.com/feed  # Matt DesLauriers — creative coding and gen art
 
 ### animation
 - https://animatorsresourcekit.blog/feed  # Animator's Resource Kit — community resources
@@ -519,9 +548,6 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://crookedtimber.org/feed/  # Crooked Timber — academic political theory
 - https://dailynous.com/feed  # Daily Nous — philosophy community news
 
-### epistemology
-- https://dailynous.com/feed  # Daily Nous — academic philosophers hub
-
 ### ethics
 - https://peasoupblog.com/feed  # PEA Soup — ethics discussion hub
 - https://blog.practicalethics.ox.ac.uk/feed  # Practical Ethics — applied ethics from Oxford
@@ -553,6 +579,7 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://stancarey.wordpress.com/feed  # Sentence First — grammar and usage
 
 ### conlangs
+- https://fiatlingua.org/feed/  # Fiat Lingua — conlang articles archive
 
 ### semiotics
 
@@ -603,6 +630,7 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://en.chessbase.com/feed  # ChessBase — professional analysis authority
 
 ### go-game
+- https://gomagic.org/blog/feed/  # Go Magic — online platform to learn Go
 
 ### puzzles
 - https://www.numberphile.com/podcast?format=rss  # Numberphile Podcast — mathematics
@@ -610,6 +638,7 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://puzzling.stackexchange.com/feeds  # Puzzling SE — community puzzle Q&A
 
 ### speedrunning
+- https://www.speedrun.com/feed  # Speedrun.com — community leaderboard news
 
 ### 3d-printing
 - https://3dprintbeginner.com/feed  # 3DPrintBeginner — educational content
@@ -622,6 +651,7 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://paulsellers.com/feed/  # Paul Sellers — hand tool woodworking master
 
 ### mechanical-keyboards
+- https://www.theremingoat.com/blog?format=rss  # ThereminGoat — exhaustive switch reviews
 
 ### lock-picking
 
@@ -646,6 +676,8 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://www.horizontalpitch.com/feed  # Horizontal Pitch — modular philosophy
 
 ### vinyl
+- https://thevinylfactory.com/feed/  # The Vinyl Factory — vinyl culture, music, and art
+- https://www.analogplanet.com/feed/  # Analog Planet — turntables and vinyl deep dives
 
 ### standup-comedy
 - https://www.chortle.co.uk/rss/  # Chortle — leading UK comedy news
@@ -670,8 +702,10 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://www.eff.org/rss/updates.xml  # EFF Deeplinks — digital rights advocacy
 - https://www.accessnow.org/feed/  # Access Now — digital rights and policy
 - https://restofworld.org/feed/  # Rest of World — global tech policy and rights
-
-### privacy
+- https://blog.torproject.org/feed/  # Tor Project Blog — anonymity network and surveillance
+- https://www.privacyguides.org/en/feed.xml  # Privacy Guides — privacy tools and recommendations
+- https://signal.org/blog/rss.xml  # Signal Blog — encrypted messaging
+- https://spreadprivacy.com/rss/  # DuckDuckGo Blog — search engine privacy
 
 ### ham-radio
 - https://www.arnewsline.org/?format=rss  # Amateur Radio Newsline — ham radio news
@@ -693,19 +727,25 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://feeds.feedburner.com/10000Birds  # 10,000 Birds — engaged enthusiast community
 
 ### aquariums
+- https://reefs.com/feed/  # Reefs.com — coral reef farming and aquarium hobby
+- https://fishkeepingworld.com/feed/  # Fishkeeping World — freshwater and marine fish care
 
 ### sourdough
 - https://www.theperfectloaf.com/feed  # The Perfect Loaf — sourdough authority
 
 ### espresso
+- https://sprudge.com/feed  # Sprudge — specialty coffee news and culture
+- https://www.baristahustle.com/feed/  # Barista Hustle — espresso science and barista resources
 
 ### fermentation
+- https://www.wildfermentation.com/feed/  # Wild Fermentation (Sandor Katz) — fermentation bible
 
 ### cellular-automata
 - https://writings.stephenwolfram.com/feed  # Stephen Wolfram — computational universes
 - https://blog.wolfram.com/feed  # Wolfram Blog — computational science and CAs
 
 ### fractals
+- https://softologyblog.wordpress.com/feed/  # Softology's Blog — fractals, cellular automata, chaos theory
 
 ### procedural-generation
 - https://www.boristhebrave.com/feed/  # Boris the Brave — wave function collapse and tilings
@@ -720,6 +760,10 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://www.percona.com/blog/feed/  # Percona — MySQL and database performance
 - https://simonwillison.net/atom/everything/  # Simon Willison — Datasette and SQLite
 - https://redis.com/blog/feed/  # Redis Blog — in-memory data store
+- https://planetpostgresql.org/rss20.xml  # Planet PostgreSQL — community blog aggregator
+- https://www.cockroachlabs.com/blog/feed.xml  # CockroachDB — distributed SQL database
+- https://www.timescale.com/blog/feed/  # Timescale — time-series database engineering
+- https://use-the-index-luke.com/blog/feed  # Use The Index, Luke — SQL performance explained
 
 ### webdev
 - https://hacks.mozilla.org/feed/  # Mozilla Hacks — web standards and Firefox
@@ -735,59 +779,57 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://blog.gitbutler.com/rss/  # GitButler — Git client and internals
 
 ### site-reliability
+- https://sreweekly.com/feed/  # SRE Weekly — curated reliability newsletter
+- https://sre.google/feed.xml  # Google SRE — site reliability engineering from Google
+- https://www.usenix.org/blog/feed  # USENIX Blog — systems research and SREcon
 
 ### homelab
 - https://www.servethehome.com/feed/  # ServeTheHome — server and homelab reviews
 - https://blog.ktz.me/rss/  # KTZ Systems — homelab and infrastructure
-
-### edge-computing
-- https://blog.cloudflare.com/rss/  # Cloudflare Blog — edge network innovations
 
 ### cognitive-science
 - https://mindhacks.com/feed/  # Mind Hacks — psychology and neuroscience
 
 ### robotics
 - https://www.therobotreport.com/feed/  # The Robot Report — industry news
+- https://robohub.org/feed/  # Robohub — connecting the robotics community
+- https://spectrum.ieee.org/feeds/topic/robotics.rss  # IEEE Spectrum Robotics — authoritative robotics reporting
 
 ### quantum-computing
 - https://quantumfrontiers.com/feed/  # Quantum Frontiers — Caltech quantum blog
 - https://aws.amazon.com/blogs/quantum-computing/feed/  # AWS Quantum — Amazon Braket and research
+- https://quantumcomputingreport.com/feed/  # Quantum Computing Report — industry tracking
 
 ### finance
 - https://www.collaborativefund.com/feed  # Collaborative Fund — investment philosophy
-
-### options
-
-### mechanism-design
+- https://optionalpha.com/blog/feed  # Option Alpha — options trading education
 - https://agtb.wordpress.com/feed  # Turing's Invisible Hand — AGT and mechanism design
 - https://vitalik.eth.limo/feed.xml  # Vitalik Buterin — mechanism design for crypto
 - https://blog.ethereum.org/feed.xml  # Ethereum Blog — blockchain mechanism design
 
 ### pharmacology
+- https://www.fiercepharma.com/rss/xml  # Fierce Pharma — pharma industry reporting
 
 ### materials-science
+- https://www.nature.com/nmat.rss  # Nature Materials — top materials science journal
 
 ### nuclear
+- https://ansnuclearcafe.org/feed/  # ANS Nuclear Cafe — American Nuclear Society blog
 
 ### topology
 - https://ldtopology.wordpress.com/feed  # Low Dimensional Topology — research frontier
 - https://dantopology.wordpress.com/feed  # Dan Ma's Topology — clear exposition
 - https://www.math3ma.com/blog/rss.xml  # Math3ma — topology and category theory
 
-### systems-programming
-- https://fasterthanli.me/index.xml  # fasterthanlime — systems programming deep dives
-- https://cliffle.com/rss.xml  # Cliff Biffle — embedded systems and Rust
-
 ### forth
+- https://ratfactor.com/feed.xml  # Ratfactor — Forth and low-level programming
 
 ### solo-dev
 - https://levels.io/rss  # Pieter Levels — nomad entrepreneur ($M+ solo dev)
+- https://www.indiehackers.com/feed.xml  # Indie Hackers — bootstrapped founder stories and revenue
+- https://www.coryzue.com/feed/  # Cory Zue — solo SaaS developer journey
 
 ### true-crime
-
-### vintage-hardware
-- https://www.righto.com/feeds/posts/default  # Ken Shirriff — IC reverse engineering
-- https://oldvcr.blogspot.com/feeds/posts/default  # Old VCR — vintage computing
 
 ## Meta & Aggregators
 

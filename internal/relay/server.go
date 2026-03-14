@@ -52,29 +52,27 @@ type Server struct {
 }
 
 func NewServer(store *RelayStore) *Server {
+	s := &Server{
+		Store: store,
+		mux:   http.NewServeMux(),
+	}
+
 	funcMap := template.FuncMap{
 		"timeAgo":      timeAgo,
 		"slugDisplay":  slugDisplay,
 		"displayScore": displayScore,
+		"feedCount": func() int { return s.feedCount() },
 	}
 
-	feedTmpl := template.Must(
+	s.feedTmpl = template.Must(
 		template.New("").Funcs(funcMap).ParseFS(templateFS, "templates/base.html", "templates/feed.html"),
 	)
-	postTmpl := template.Must(
+	s.postTmpl = template.Must(
 		template.New("").Funcs(funcMap).ParseFS(templateFS, "templates/base.html", "templates/post.html"),
 	)
-	aboutTmpl := template.Must(
+	s.aboutTmpl = template.Must(
 		template.New("").Funcs(funcMap).ParseFS(templateFS, "templates/base.html", "templates/about.html"),
 	)
-
-	s := &Server{
-		Store:     store,
-		mux:       http.NewServeMux(),
-		feedTmpl:  feedTmpl,
-		postTmpl:  postTmpl,
-		aboutTmpl: aboutTmpl,
-	}
 
 	s.mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/w/all", http.StatusFound)
@@ -96,6 +94,16 @@ func NewServer(store *RelayStore) *Server {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
+}
+
+func (s *Server) feedCount() int {
+	n := 0
+	for _, sec := range s.Feeds {
+		for _, g := range sec.Groups {
+			n += len(g.Entries)
+		}
+	}
+	return n
 }
 
 // Template data types
@@ -385,16 +393,10 @@ func (s *Server) handleCreatePost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAbout(w http.ResponseWriter, r *http.Request) {
-	totalFeeds := 0
-	for _, sec := range s.Feeds {
-		for _, g := range sec.Groups {
-			totalFeeds += len(g.Entries)
-		}
-	}
 	data := struct {
 		Sections   []FeedSection
 		TotalFeeds int
-	}{s.Feeds, totalFeeds}
+	}{s.Feeds, s.feedCount()}
 	if err := s.aboutTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		log.Printf("template error: %v", err)
 	}
@@ -438,7 +440,7 @@ func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 
 	if slug == "all" {
 		posts, err = s.Store.ListAllPosts("new", 50)
-		desc = "AI-curated technical reading from 1500+ RSS feeds"
+		desc = fmt.Sprintf("AI-curated technical reading from %d+ RSS feeds", s.feedCount())
 	} else {
 		anchor, aerr := s.Store.GetSocialEmbeddingBySlug(slug)
 		if aerr != nil || anchor == nil {

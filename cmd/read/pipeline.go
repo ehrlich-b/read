@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -427,6 +428,11 @@ func fetchCmd(args []string) {
 		inserted, len(sources), dupes, old, short, alreadyPosted)
 }
 
+func processLogPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, "Library", "Logs", "read", "process.log")
+}
+
 func processCmd(args []string) {
 	fs := flag.NewFlagSet("process", flag.ExitOnError)
 	dbPath := fs.String("db", defaultDBPath(), "SQLite database path")
@@ -434,6 +440,18 @@ func processCmd(args []string) {
 	dryRun := fs.Bool("dry-run", false, "Preview without processing")
 	scorer := fs.String("scorer", "skills/scorer.md", "Path to scorer prompt")
 	fs.Parse(args)
+
+	// Log to ~/Library/Logs/read/process.log
+	logPath := processLogPath()
+	os.MkdirAll(filepath.Dir(logPath), 0755)
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatalf("open log: %v", err)
+	}
+	defer logFile.Close()
+	logger := log.New(logFile, "", log.LstdFlags)
+	logger.Printf("process started")
+	fmt.Fprintf(os.Stderr, "logging to %s\n", logPath)
 
 	store, err := relay.Open(*dbPath)
 	if err != nil {
@@ -476,6 +494,7 @@ func processCmd(args []string) {
 		// Paywall check
 		if isPaywall(a.RawText) {
 			store.UpdateArticleStatus(a.ID, "skipped", "paywall", "", 0)
+			logger.Printf("SKIP paywall: %s", a.Title)
 			skipped++
 			continue
 		}
@@ -484,6 +503,7 @@ func processCmd(args []string) {
 		comp, err := compress(a.Title, a.Source, a.RawText)
 		if err != nil || comp == "" {
 			store.UpdateArticleStatus(a.ID, "skipped", "compression_failed", "", 0)
+			logger.Printf("SKIP compression_failed: %s", a.Title)
 			skipped++
 			continue
 		}
@@ -491,6 +511,7 @@ func processCmd(args []string) {
 		// Bot refusal check
 		if isBotRefusal(comp) {
 			store.UpdateArticleStatus(a.ID, "skipped", "refusal", "", 0)
+			logger.Printf("SKIP refusal: %s", a.Title)
 			skipped++
 			continue
 		}
@@ -534,24 +555,26 @@ func processCmd(args []string) {
 		post, err := relay.CreatePost(store, emb, params)
 		if err != nil {
 			store.UpdateArticleStatus(a.ID, "skipped", fmt.Sprintf("post_error: %v", err), comp, mass)
+			logger.Printf("SKIP post_error: %s: %v", a.Title, err)
 			skipped++
 			continue
 		}
 
 		// Check if it was a dupe (CreatePost returns existing post on URL match)
 		if post.Link != nil && *post.Link == a.Link {
-			// Could be new or existing -- check if the post ID was just created
-			// by seeing if the text matches what we just sent
 			if post.Text != comp {
 				store.UpdateArticleStatus(a.ID, "skipped", "already_posted", comp, mass)
+				logger.Printf("SKIP already_posted: %s", a.Title)
 				skipped++
 				continue
 			}
 		}
 
 		store.UpdateArticleStatus(a.ID, "posted", "", comp, mass)
+		logger.Printf("POSTED [score=%d] %s: %s (%s) date=%s compressed=%d chars", mass, a.Source, a.Title, a.Link, a.PublishedAt, len(comp))
 		posted++
 	}
 
 	fmt.Fprintf(os.Stderr, "\r[%d/%d] compressed: %d posted: %d skipped: %d\n", total, total, compressed, posted, skipped)
+	logger.Printf("process done: compressed=%d posted=%d skipped=%d", compressed, posted, skipped)
 }

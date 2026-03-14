@@ -32,6 +32,9 @@ func main() {
 		case "process":
 			processCmd(os.Args[2:])
 			return
+		case "reassign":
+			reassignCmd(os.Args[2:])
+			return
 		}
 	}
 	serveCmd()
@@ -145,6 +148,105 @@ func seedCmd(args []string) {
 		log.Fatalf("seed spaces: %v", err)
 	}
 	fmt.Printf("seeded %d spaces\n", n)
+}
+
+func reassignCmd(args []string) {
+	fs := flag.NewFlagSet("reassign", flag.ExitOnError)
+	dbPath := fs.String("db", defaultDBPath(), "SQLite database path")
+	fs.Parse(args)
+
+	store, err := relay.Open(*dbPath)
+	if err != nil {
+		log.Fatalf("open db: %v", err)
+	}
+	defer store.Close()
+
+	emb, err := embedding.NewFromProvider("auto", "", "")
+	if err != nil {
+		log.Fatalf("embedder: %v", err)
+	}
+
+	// Get current valid anchor IDs
+	anchorEmbs, err := store.ListAnchorsForEmbedder(emb.Name())
+	if err != nil || len(anchorEmbs) == 0 {
+		log.Fatalf("no anchor embeddings found for %s", emb.Name())
+	}
+	validIDs := make(map[string]bool)
+	for _, ae := range anchorEmbs {
+		validIDs[ae.AnchorID] = true
+	}
+
+	// Find post_anchors pointing to dead anchors (invisible or missing)
+	rows, err := store.DB().Query(
+		`SELECT pa.post_id, pa.anchor_id, p.embedding_512
+		 FROM post_anchors pa
+		 JOIN social_embeddings p ON p.id = pa.post_id
+		 LEFT JOIN social_embeddings a ON a.id = pa.anchor_id AND a.kind = 'anchor' AND a.visible = 1
+		 WHERE a.id IS NULL`)
+	if err != nil {
+		log.Fatalf("query dead anchors: %v", err)
+	}
+
+	type deadAssignment struct {
+		postID   string
+		anchorID string
+		vecBytes []byte
+	}
+	var dead []deadAssignment
+	for rows.Next() {
+		var d deadAssignment
+		if err := rows.Scan(&d.postID, &d.anchorID, &d.vecBytes); err != nil {
+			log.Fatalf("scan: %v", err)
+		}
+		dead = append(dead, d)
+	}
+	rows.Close()
+
+	if len(dead) == 0 {
+		fmt.Println("no orphaned assignments found")
+		return
+	}
+
+	// For each dead assignment, find the best matching current anchor
+	updated := 0
+	for _, d := range dead {
+		if len(d.vecBytes) == 0 {
+			continue
+		}
+		postVec := embedding.BytesAsVec(d.vecBytes)
+
+		bestID := ""
+		bestSim := float32(0)
+		for _, ae := range anchorEmbs {
+			if len(ae.Centroid512) == 0 {
+				continue
+			}
+			anchorVec := embedding.BytesAsVec(ae.Centroid512)
+			sim := embedding.Cosine(postVec, anchorVec)
+			if sim > bestSim {
+				bestSim = sim
+				bestID = ae.AnchorID
+			}
+		}
+
+		if bestSim < 0.40 {
+			// Below threshold, just delete the assignment
+			store.DB().Exec("DELETE FROM post_anchors WHERE post_id = ? AND anchor_id = ?", d.postID, d.anchorID)
+		} else {
+			// Check if post already has this anchor (from other slot)
+			var count int
+			store.DB().QueryRow("SELECT COUNT(*) FROM post_anchors WHERE post_id = ? AND anchor_id = ?", d.postID, bestID).Scan(&count)
+			if count > 0 {
+				// Already assigned to this anchor in other slot, just remove the dead one
+				store.DB().Exec("DELETE FROM post_anchors WHERE post_id = ? AND anchor_id = ?", d.postID, d.anchorID)
+			} else {
+				store.DB().Exec("UPDATE post_anchors SET anchor_id = ?, similarity = ? WHERE post_id = ? AND anchor_id = ?",
+					bestID, bestSim, d.postID, d.anchorID)
+				updated++
+			}
+		}
+	}
+	fmt.Printf("reassigned %d post-anchor slots (%d orphans total)\n", updated, len(dead))
 }
 
 func defaultDBPath() string {
