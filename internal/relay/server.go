@@ -3,13 +3,14 @@ package relay
 import (
 	"embed"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"html"
 	"html/template"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
-	"math"
 	"regexp"
 	"strings"
 	"sync"
@@ -83,6 +84,8 @@ func NewServer(store *RelayStore) *Server {
 	s.mux.HandleFunc("GET /d/{domain}", s.handleDomainFeed)
 	s.mux.HandleFunc("GET /p/{postID}", s.handlePostPage)
 	s.mux.HandleFunc("POST /api/post", s.handleCreatePost)
+	s.mux.HandleFunc("GET /feed.xml", s.handleRSSFeed)
+	s.mux.HandleFunc("GET /w/{slug}/feed.xml", s.handleRSSFeed)
 	s.mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]bool{"ok": true})
@@ -395,6 +398,107 @@ func (s *Server) handleAbout(w http.ResponseWriter, r *http.Request) {
 	if err := s.aboutTmpl.ExecuteTemplate(w, "base", data); err != nil {
 		log.Printf("template error: %v", err)
 	}
+}
+
+// RSS feed types
+
+type rssChannel struct {
+	XMLName     xml.Name  `xml:"channel"`
+	Title       string    `xml:"title"`
+	Link        string    `xml:"link"`
+	Description string    `xml:"description"`
+	Language    string    `xml:"language"`
+	PubDate     string    `xml:"pubDate,omitempty"`
+	Items       []rssItem `xml:"item"`
+}
+
+type rssItem struct {
+	Title       string `xml:"title"`
+	Link        string `xml:"link"`
+	Description string `xml:"description"`
+	PubDate     string `xml:"pubDate,omitempty"`
+	GUID        string `xml:"guid"`
+}
+
+type rssDoc struct {
+	XMLName xml.Name   `xml:"rss"`
+	Version string     `xml:"version,attr"`
+	Channel rssChannel `xml:"channel"`
+}
+
+func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
+	slug := r.PathValue("slug")
+	if slug == "" {
+		slug = "all"
+	}
+
+	var posts []*SocialEmbedding
+	var err error
+	var desc string
+
+	if slug == "all" {
+		posts, err = s.Store.ListAllPosts("new", 50)
+		desc = "AI-curated technical reading from 1500+ RSS feeds"
+	} else {
+		anchor, aerr := s.Store.GetSocialEmbeddingBySlug(slug)
+		if aerr != nil || anchor == nil {
+			http.NotFound(w, r)
+			return
+		}
+		posts, err = s.Store.ListPostsByAnchor(anchor.ID, "new", 50)
+		desc = anchor.Text
+	}
+	if err != nil {
+		http.Error(w, "internal error", 500)
+		return
+	}
+
+	items := make([]rssItem, 0, len(posts))
+	for _, p := range posts {
+		title, summary := extractTitleSummary(p)
+		link := "https://read.ehrlich.dev/p/" + p.ID
+		if p.Link != nil && *p.Link != "" {
+			link = *p.Link
+		}
+		pubDate := p.CreatedAt
+		if p.PublishedAt != nil {
+			pubDate = *p.PublishedAt
+		}
+		items = append(items, rssItem{
+			Title:       title,
+			Link:        link,
+			Description: summary,
+			PubDate:     pubDate.UTC().Format(time.RFC1123Z),
+			GUID:        "https://read.ehrlich.dev/p/" + p.ID,
+		})
+	}
+
+	feedTitle := "read.ehrlich.dev"
+	feedLink := "https://read.ehrlich.dev/w/all"
+	if slug != "all" {
+		feedTitle = slugDisplay(slug) + " - read.ehrlich.dev"
+		feedLink = "https://read.ehrlich.dev/w/" + slug
+	}
+
+	doc := rssDoc{
+		Version: "2.0",
+		Channel: rssChannel{
+			Title:       feedTitle,
+			Link:        feedLink,
+			Description: desc,
+			Language:    "en",
+			Items:       items,
+		},
+	}
+	if len(items) > 0 {
+		doc.Channel.PubDate = items[0].PubDate
+	}
+
+	w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+	w.Write([]byte(xml.Header))
+	enc := xml.NewEncoder(w)
+	enc.Indent("", "  ")
+	enc.Encode(doc)
 }
 
 // ParseFeeds parses a feeds.md file into structured sections.

@@ -4,18 +4,66 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{template "title" .}}</title>
+<meta name="description" content="AI-curated technical reading from 1500+ RSS feeds, scored and organized by topic.">
+<meta property="og:site_name" content="read.ehrlich.dev">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{template "title" .}}">
+<meta property="og:description" content="AI-curated technical reading from 1500+ RSS feeds, scored and organized by topic.">
+<meta property="og:url" content="https://read.ehrlich.dev">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{template "title" .}}">
+<meta name="twitter:description" content="AI-curated technical reading from 1500+ RSS feeds.">
+<meta name="author" content="Bryan Ehrlich">
+<link rel="alternate" type="application/rss+xml" title="read.ehrlich.dev" href="/feed.xml">
+<script>
+(function(){var t=localStorage.getItem('theme');if(t&&t!=='auto')document.documentElement.setAttribute('data-theme',t)})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --text: #e0e0e0;
-  --text-dim: #888;
-  --bg: #1a1a1a;
-  --bg-card: #242424;
-  --action: #4a9eff;
+  --text: #cdcdcd;
+  --text-dim: #8a8a8e;
+  --bg: #161618;
+  --bg-card: #1e1e21;
+  --action: #7cb4d8;
+  --border: rgba(255,255,255,0.07);
+  --border-faint: rgba(255,255,255,0.04);
+  --hover-bg: rgba(255,255,255,0.05);
+  --underline: rgba(255,255,255,0.18);
+  --underline-hover: rgba(255,255,255,0.4);
   --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+@media(prefers-color-scheme:light){
+  :root:not([data-theme="dark"]) {
+    --text: #2c2c2c;
+    --text-dim: #6d6d68;
+    --bg: #faf9f7;
+    --bg-card: #f0efeb;
+    --action: #2966a3;
+    --border: rgba(0,0,0,0.08);
+    --border-faint: rgba(0,0,0,0.04);
+    --hover-bg: rgba(0,0,0,0.03);
+    --underline: rgba(0,0,0,0.15);
+    --underline-hover: rgba(0,0,0,0.35);
+  }
+}
+:root[data-theme="light"] {
+  --text: #2c2c2c;
+  --text-dim: #6d6d68;
+  --bg: #faf9f7;
+  --bg-card: #f0efeb;
+  --action: #2966a3;
+  --border: rgba(0,0,0,0.08);
+  --border-faint: rgba(0,0,0,0.04);
+  --hover-bg: rgba(0,0,0,0.03);
+  --underline: rgba(0,0,0,0.15);
+  --underline-hover: rgba(0,0,0,0.35);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
@@ -23,12 +71,12 @@ body {
   margin: 0 auto;
   padding: 16px;
 }
-a { color: var(--action); text-decoration: none; }
+a { color: var(--action); text-decoration: none; transition: color 0.2s; }
 a:hover { text-decoration: underline; }
 .site-nav {
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--border);
   font-size: 13px;
   font-family: var(--mono);
   display: flex;
@@ -43,6 +91,24 @@ a:hover { text-decoration: underline; }
 }
 .site-nav .brand:hover { color: var(--action); text-decoration: none; }
 .site-nav .tagline { color: var(--text-dim); font-size: 12px; }
+.site-nav .nav-links { margin-left: auto; display: flex; gap: 14px; }
+.site-nav .nav-links a { color: var(--text-dim); font-size: 12px; }
+.site-nav .nav-links a:hover { color: var(--text); text-decoration: none; }
+.theme-toggle { background:none; border:none; color:var(--text-dim); font-size:12px; font-family:var(--mono); cursor:pointer; padding:0; transition:color 0.2s; }
+.theme-toggle:hover { color:var(--text); }
+.site-footer {
+  margin-top: 40px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-dim);
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+.site-footer a { color: var(--text-dim); }
+.site-footer a:hover { color: var(--text); text-decoration: none; }
 </style>
 {{template "head" .}}
 </head>
@@ -50,8 +116,38 @@ a:hover { text-decoration: underline; }
 <nav class="site-nav">
   <a href="/" class="brand">read.ehrlich.dev</a>
   <span class="tagline">ai-curated rss</span>
-  <a href="/about" style="margin-left:auto;color:var(--text-dim);font-size:12px">about</a>
+  <span class="nav-links">
+    <a href="/about">about</a>
+    <a href="https://github.com/ehrlich-b/read" target="_blank" rel="noopener">github</a>
+    <a href="/feed.xml" title="RSS feed">rss</a>
+    <button class="theme-toggle" id="theme-toggle" title="Toggle theme">dark</button>
+  </span>
 </nav>
 {{template "content" .}}
+<footer class="site-footer">
+  <span>built by <a href="https://ehrlich.dev" target="_blank" rel="noopener">bryan ehrlich</a></span>
+  <a href="https://github.com/ehrlich-b/read" target="_blank" rel="noopener">source</a>
+</footer>
+<script>
+(function(){
+  var btn=document.getElementById('theme-toggle');
+  var root=document.documentElement;
+  var order=['auto','light','dark'];
+  var labels={'auto':'auto','light':'light','dark':'dark'};
+  var saved=localStorage.getItem('theme')||'auto';
+  function apply(t){
+    if(t==='auto'){root.removeAttribute('data-theme')}
+    else{root.setAttribute('data-theme',t)}
+    btn.textContent=labels[t];
+    localStorage.setItem('theme',t);
+  }
+  apply(saved);
+  btn.addEventListener('click',function(){
+    var i=order.indexOf(saved);
+    saved=order[(i+1)%3];
+    apply(saved);
+  });
+})();
+</script>
 </body>
 </html>{{end}}

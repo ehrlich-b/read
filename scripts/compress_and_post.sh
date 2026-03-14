@@ -63,7 +63,7 @@ while IFS=$'\t' read -r source title link date text; do
   compressed=$(echo "$text" | claude -p "Compress this article excerpt into a dense, informative summary of max 800 characters. Include the key insight or finding. Start with the article title and source in brackets. No preamble.
 
 Title: $title
-Source: $source" --model claude-sonnet-4-6 2>/dev/null)
+Source: $source" --model claude-haiku-4-5-20251001 2>/dev/null)
 
   if [ -z "$compressed" ]; then
     echo "  SKIP: compression failed"
@@ -81,15 +81,15 @@ Source: $source" --model claude-sonnet-4-6 2>/dev/null)
 
   # Score via claude (using original text, not compressed)
   scorer_prompt=$(sed '1,/^---$/d; 1,/^---$/d' "$(dirname "$0")/../skills/scorer.md")
-  score_output=$(echo -e "Title: $title\nSource: $source\n\n$text" | claude -p "$scorer_prompt" --model claude-sonnet-4-6 2>&1)
+  score_output=$(echo -e "Title: $title\nSource: $source\n\n$text" | claude -p "$scorer_prompt" --model claude-haiku-4-5-20251001 2>&1)
 
   # Extract mass from SCORE line, default to 10
   mass=$(echo "$score_output" | grep -oE 'SCORE [0-9]+' | head -1 | awk '{print $2}')
   if [ -z "$mass" ] || [ "$mass" -lt 1 ] 2>/dev/null; then
     mass=10
   fi
-  if [ "$mass" -gt 10000 ] 2>/dev/null; then
-    mass=10000
+  if [ "$mass" -gt 1000 ] 2>/dev/null; then
+    mass=1000
   fi
   echo "  scored: $mass"
 

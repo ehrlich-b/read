@@ -6,7 +6,7 @@
 .about-header p{font-size:13px;color:var(--text-dim);margin-top:6px;line-height:1.6;max-width:600px}
 .about-header .stat{font-family:var(--mono);color:var(--text);font-weight:600}
 .feed-sections{display:flex;flex-direction:column;gap:20px}
-.feed-section{border:1px solid rgba(255,255,255,0.06);border-radius:6px;overflow:hidden}
+.feed-section{border:1px solid var(--border);border-radius:6px;overflow:hidden}
 .feed-section summary{font-size:14px;font-weight:600;padding:10px 14px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;background:var(--bg-card)}
 .feed-section summary::-webkit-details-marker{display:none}
 .feed-section summary::before{content:'\25B6';font-size:9px;color:var(--text-dim);transition:transform 0.15s}
@@ -18,7 +18,7 @@
 .feed-group h3 a{color:var(--action);text-decoration:none}
 .feed-group h3 a:hover{text-decoration:underline}
 .feed-list-about{list-style:none}
-.feed-list-about li{font-size:12px;padding:3px 0;display:flex;gap:8px;align-items:baseline;border-bottom:1px solid rgba(255,255,255,0.03)}
+.feed-list-about li{font-size:12px;padding:3px 0;display:flex;gap:8px;align-items:baseline;border-bottom:1px solid var(--border-faint)}
 .feed-list-about li:last-child{border-bottom:none}
 .feed-list-about .feed-url{color:var(--text-dim);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px;flex-shrink:0}
 .feed-list-about .feed-url a{color:var(--text-dim);text-decoration:none}
@@ -34,8 +34,8 @@
 {{define "content"}}
 <div class="about-header">
 <h1>about</h1>
-<p>read.ehrlich.dev is an AI-curated RSS reader. Articles are fetched from <span class="stat">{{.TotalFeeds}}</span> RSS feeds, compressed and scored by Claude, embedded for semantic similarity, and assigned to topic spaces. No human curation — the AI reads everything so you don't have to.</p>
-<p style="margin-top:8px"><a href="/w/all">&larr; back to feed</a></p>
+<p>read.ehrlich.dev is an AI-curated RSS reader built by <a href="https://ehrlich.dev" target="_blank" rel="noopener">Bryan Ehrlich</a>. Articles are fetched from <span class="stat">{{.TotalFeeds}}</span> RSS feeds, compressed and scored by Claude, embedded for semantic similarity, and assigned to topic spaces. No human curation — the AI reads everything so you don't have to.</p>
+<p style="margin-top:8px"><a href="https://github.com/ehrlich-b/read" target="_blank" rel="noopener">source on github</a> · <a href="/w/all">&larr; back to feed</a></p>
 </div>
 <div class="feed-sections">
 {{range .Sections}}
