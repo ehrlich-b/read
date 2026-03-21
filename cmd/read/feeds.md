@@ -186,6 +186,7 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 ### formal-verification
 - https://zipcpu.com/feed  # ZipCPU — practical FPGA verification
 - https://www.logicmatters.net/blog/feed  # Logic Matters — mathematical logic
+- https://buttondown.com/hillelwayne/rss  # Hillel Wayne — formal methods, specifications, Z3
 
 ### computer-architecture
 - https://developer.nvidia.com/blog/feed  # NVIDIA Developer — GPU architecture
@@ -322,6 +323,7 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://therecord.media/feed  # The Record — cybersecurity journalism
 - https://portswigger.net/research/rss  # PortSwigger Research — web security from Burp Suite creators
 - https://bishopfox.com/feed  # Bishop Fox — offensive security research
+- https://lcamtuf.substack.com/feed  # lcamtuf (Michal Zalewski) — AFL creator on math, CS, security
 - https://pentestlab.blog/feed/  # Penetration Testing Lab — exploitation techniques
 - https://pentesterlab.com/blog/feed  # PentesterLab — web app security tutorials
 - https://www.pentestpartners.com/feed/  # Pen Test Partners — elite expertise
@@ -837,6 +839,11 @@ Each space is a mini Hacker News for its topic. These feeds are the sources.
 - https://news.ycombinator.com/rss  # Hacker News — gold standard practitioner signal
 - https://lobste.rs/rss  # Lobsters — highly technical community curation
 - https://hnrss.org/newest?q=machine%20learning  # HN RSS (ML) — ML community discussions
+- https://fedi.simonwillison.net/@simon.rss  # Simon Willison (Mastodon) — AI/databases/OSS link curation
+- https://mathstodon.xyz/@tao.rss  # Terence Tao (Mastodon) — math research and AI-for-math
+- https://social.jvns.ca/@b0rk.rss  # Julia Evans (Mastodon) — systems and networking discussions
+- https://infosec.exchange/@briankrebs.rss  # Brian Krebs (Mastodon) — security investigations
+- https://mastodon.social/@bagder.rss  # Daniel Stenberg (Mastodon) — curl, HTTP, open source security
 - https://hnrss.org/newest?q=security  # HN RSS (Security) — security community stories
 - https://lobste.rs/t/ai.rss  # Lobsters (AI) — curated AI practitioner upvoting
 - https://feeds.arstechnica.com/arstechnica/index  # Ars Technica — in-depth tech journalism
