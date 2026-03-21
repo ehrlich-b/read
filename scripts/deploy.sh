@@ -14,7 +14,9 @@ echo "=== uploading binary ==="
 scp /tmp/read-linux "$HOST:/opt/read-bin.new"
 
 echo "=== uploading database ==="
-scp ~/.read/read.db "$HOST:/root/.read/read.db.new"
+sqlite3 ~/.read/read.db "PRAGMA wal_checkpoint(TRUNCATE);"
+cp ~/.read/read.db /tmp/read-deploy.db
+scp /tmp/read-deploy.db "$HOST:/root/.read/read.db.new"
 
 echo "=== deploying on server ==="
 ssh "$HOST" bash -s <<'REMOTE'
