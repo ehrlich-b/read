@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/ehrlich-b/read/internal/embedding"
+	"github.com/ehrlich-b/read/internal/llm"
 	"github.com/ehrlich-b/read/internal/relay"
 )
 
@@ -243,36 +244,97 @@ func isBotRefusal(text string) bool {
 	return botRefusalRe.MatchString(text)
 }
 
-func compress(title, source, text string) (string, error) {
-	prompt := fmt.Sprintf(`Compress this article excerpt into a dense, informative summary of max 800 characters. Include the key insight or finding. Start with the article title and source in brackets. No preamble.
+const claudeModel = "claude-haiku-4-5-20251001"
+
+// backend picks the compression/scoring backend: the claude CLI or an
+// OpenAI-compatible chat-completions endpoint.
+type backend struct {
+	kind   string // "claude" or "openai"
+	client *llm.Client
+}
+
+func newBackend(kind string) (*backend, error) {
+	switch kind {
+	case "claude":
+		return &backend{kind: "claude"}, nil
+	case "openai":
+		client, err := newOpenAIClient()
+		if err != nil {
+			return nil, err
+		}
+		return &backend{kind: "openai", client: client}, nil
+	default:
+		return nil, fmt.Errorf("unknown llm backend %q (available: claude, openai)", kind)
+	}
+}
+
+func newOpenAIClient() (*llm.Client, error) {
+	apiKey := os.Getenv("READ_LLM_API_KEY")
+	if apiKey == "" {
+		return nil, fmt.Errorf("READ_LLM_API_KEY not set")
+	}
+	if model := os.Getenv("READ_LLM_MODEL"); model == "" {
+		return nil, fmt.Errorf("READ_LLM_MODEL not set")
+	}
+	return llm.New(os.Getenv("READ_LLM_BASE_URL"), os.Getenv("READ_LLM_MODEL"), apiKey), nil
+}
+
+func compressPrompt(title, source string) string {
+	return fmt.Sprintf(`Compress this article excerpt into a dense, informative summary of max 800 characters. Include the key insight or finding. Start with the article title and source in brackets. No preamble.
 
 Title: %s
 Source: %s`, title, source)
+}
 
-	cmd := exec.Command("claude", "-p", prompt, "--model", "claude-haiku-4-5-20251001")
-	cmd.Stdin = strings.NewReader(text)
-	// Remove CLAUDECODE env var
-	env := os.Environ()
-	filtered := make([]string, 0, len(env))
-	for _, e := range env {
-		if !strings.HasPrefix(e, "CLAUDECODE=") {
-			filtered = append(filtered, e)
+func scoreInput(title, source, text string) string {
+	return fmt.Sprintf("Title: %s\nSource: %s\n\n%s", title, source, text)
+}
+
+func (b *backend) compress(title, source, text string) (string, error) {
+	prompt := compressPrompt(title, source)
+	if b.kind != "openai" {
+		// claude CLI: prompt via -p, article text via stdin
+		cmd := exec.Command("claude", "-p", prompt, "--model", claudeModel)
+		cmd.Stdin = strings.NewReader(text)
+		cmd.Env = stripClaudeCodeEnv()
+		out, err := cmd.Output()
+		if err != nil {
+			return "", err
 		}
+		return strings.TrimSpace(string(out)), nil
 	}
-	cmd.Env = filtered
-
-	out, err := cmd.Output()
+	// OpenAI-compatible: single user message carrying the same prompt + article text
+	content, err := b.client.ChatSingle(prompt + "\n\n" + text)
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(out)), nil
+	return strings.TrimSpace(content), nil
 }
 
-func score(title, source, text, scorerPrompt string) (int, error) {
-	input := fmt.Sprintf("Title: %s\nSource: %s\n\n%s", title, source, text)
+func (b *backend) score(title, source, text, scorerPrompt string) (int, error) {
+	input := scoreInput(title, source, text)
+	var content string
+	if b.kind != "openai" {
+		// claude CLI: scorer prompt via -p, article via stdin
+		cmd := exec.Command("claude", "-p", scorerPrompt, "--model", claudeModel)
+		cmd.Stdin = strings.NewReader(input)
+		cmd.Env = stripClaudeCodeEnv()
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return 10, nil // default on failure
+		}
+		content = string(out)
+	} else {
+		out, err := b.client.ChatSingle(scorerPrompt + "\n\n" + input)
+		if err != nil {
+			return 10, nil // default on failure
+		}
+		content = out
+	}
+	return parseScore([]byte(content)), nil
+}
 
-	cmd := exec.Command("claude", "-p", scorerPrompt, "--model", "claude-haiku-4-5-20251001")
-	cmd.Stdin = strings.NewReader(input)
+func stripClaudeCodeEnv() []string {
 	env := os.Environ()
 	filtered := make([]string, 0, len(env))
 	for _, e := range env {
@@ -280,26 +342,23 @@ func score(title, source, text, scorerPrompt string) (int, error) {
 			filtered = append(filtered, e)
 		}
 	}
-	cmd.Env = filtered
+	return filtered
+}
 
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return 10, nil // default on failure
-	}
-
+func parseScore(out []byte) int {
 	re := regexp.MustCompile(`SCORE (\d+)`)
 	m := re.FindSubmatch(out)
 	if m == nil {
-		return 10, nil
+		return 10
 	}
 	mass, err := strconv.Atoi(string(m[1]))
 	if err != nil || mass < 1 {
-		return 10, nil
+		return 10
 	}
 	if mass > 1000 {
 		mass = 1000
 	}
-	return mass, nil
+	return mass
 }
 
 func loadScorerPrompt(path string) string {
@@ -439,7 +498,13 @@ func processCmd(args []string) {
 	limit := fs.Int("limit", 0, "Max articles to process (0 = all)")
 	dryRun := fs.Bool("dry-run", false, "Preview without processing")
 	scorer := fs.String("scorer", "skills/scorer.md", "Path to scorer prompt")
+	llmFlag := fs.String("llm", "claude", "LLM backend for compress/score: claude or openai")
 	fs.Parse(args)
+
+	backend, err := newBackend(*llmFlag)
+	if err != nil {
+		log.Fatalf("llm backend: %v", err)
+	}
 
 	// Log to ~/Library/Logs/read/process.log
 	logPath := processLogPath()
@@ -500,7 +565,7 @@ func processCmd(args []string) {
 		}
 
 		// Compress
-		comp, err := compress(a.Title, a.Source, a.RawText)
+		comp, err := backend.compress(a.Title, a.Source, a.RawText)
 		if err != nil || comp == "" {
 			store.UpdateArticleStatus(a.ID, "skipped", "compression_failed", "", 0)
 			logger.Printf("SKIP compression_failed: %s", a.Title)
@@ -522,7 +587,7 @@ func processCmd(args []string) {
 		}
 
 		// Score
-		mass, err := score(a.Title, a.Source, a.RawText, scorerPrompt)
+		mass, err := backend.score(a.Title, a.Source, a.RawText, scorerPrompt)
 		if err != nil {
 			mass = 10
 		}
