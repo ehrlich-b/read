@@ -39,9 +39,24 @@ func New(baseURL, model, apiKey string) *Client {
 // ChatSingle sends a single user message to {baseURL}/chat/completions and
 // returns the text of choices[0].message.content.
 func (c *Client) ChatSingle(message string) (string, error) {
+	return c.chat([]chatMessage{{Role: "user", Content: message}})
+}
+
+// ChatJSON sends a system message followed by a user message to
+// {baseURL}/chat/completions and returns the text of choices[0].message.content.
+// It is intended for requests that carry a system prompt, such as a batched
+// compress+score request whose reply is a JSON array.
+func (c *Client) ChatJSON(system, user string) (string, error) {
+	return c.chat([]chatMessage{
+		{Role: "system", Content: system},
+		{Role: "user", Content: user},
+	})
+}
+
+func (c *Client) chat(messages []chatMessage) (string, error) {
 	body, err := json.Marshal(chatRequest{
 		Model:    c.model,
-		Messages: []chatMessage{{Role: "user", Content: message}},
+		Messages: messages,
 	})
 	if err != nil {
 		return "", fmt.Errorf("llm: marshal request: %w", err)
