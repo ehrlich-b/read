@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"encoding/xml"
 	"flag"
 	"fmt"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	"github.com/ehrlich-b/read/internal/embedding"
+	"github.com/ehrlich-b/read/internal/llm"
 	"github.com/ehrlich-b/read/internal/relay"
 )
 
@@ -243,36 +245,239 @@ func isBotRefusal(text string) bool {
 	return botRefusalRe.MatchString(text)
 }
 
-func compress(title, source, text string) (string, error) {
-	prompt := fmt.Sprintf(`Compress this article excerpt into a dense, informative summary of max 800 characters. Include the key insight or finding. Start with the article title and source in brackets. No preamble.
+const claudeModel = "claude-haiku-4-5-20251001"
 
-Title: %s
-Source: %s`, title, source)
+// backend picks the compression/scoring backend: the claude CLI or an
+// OpenAI-compatible chat-completions endpoint.
+type backend struct {
+	kind   string // "claude" or "openai"
+	client *llm.Client
+}
 
-	cmd := exec.Command("claude", "-p", prompt, "--model", "claude-haiku-4-5-20251001")
-	cmd.Stdin = strings.NewReader(text)
-	// Remove CLAUDECODE env var
-	env := os.Environ()
-	filtered := make([]string, 0, len(env))
-	for _, e := range env {
-		if !strings.HasPrefix(e, "CLAUDECODE=") {
-			filtered = append(filtered, e)
+func newBackend(kind string) (*backend, error) {
+	switch kind {
+	case "claude":
+		return &backend{kind: "claude"}, nil
+	case "openai":
+		client, err := newOpenAIClient()
+		if err != nil {
+			return nil, err
 		}
+		return &backend{kind: "openai", client: client}, nil
+	default:
+		return nil, fmt.Errorf("unknown llm backend %q (available: claude, openai)", kind)
 	}
-	cmd.Env = filtered
+}
 
-	out, err := cmd.Output()
+func newOpenAIClient() (*llm.Client, error) {
+	apiKey := os.Getenv("READ_LLM_API_KEY")
+	if apiKey == "" {
+		return nil, fmt.Errorf("READ_LLM_API_KEY not set")
+	}
+	if model := os.Getenv("READ_LLM_MODEL"); model == "" {
+		return nil, fmt.Errorf("READ_LLM_MODEL not set")
+	}
+	return llm.New(os.Getenv("READ_LLM_BASE_URL"), os.Getenv("READ_LLM_MODEL"), apiKey), nil
+}
+
+// compressInstructions is the compression rule text shared by the single-article
+// prompt and the batched (--batch N) system prompt, so both paths apply the same
+// rules.
+const compressInstructions = "Compress this article excerpt into a dense, informative summary of max 800 characters. Include the key insight or finding. Start with the article title and source in brackets. No preamble."
+
+func compressPrompt(title, source string) string {
+	return fmt.Sprintf("%s\n\nTitle: %s\nSource: %s", compressInstructions, title, source)
+}
+
+func scoreInput(title, source, text string) string {
+	return fmt.Sprintf("Title: %s\nSource: %s\n\n%s", title, source, text)
+}
+
+func (b *backend) compress(title, source, text string) (string, error) {
+	prompt := compressPrompt(title, source)
+	if b.kind != "openai" {
+		// claude CLI: prompt via -p, article text via stdin
+		cmd := exec.Command("claude", "-p", prompt, "--model", claudeModel)
+		cmd.Stdin = strings.NewReader(text)
+		cmd.Env = stripClaudeCodeEnv()
+		out, err := cmd.Output()
+		if err != nil {
+			return "", err
+		}
+		return strings.TrimSpace(string(out)), nil
+	}
+	// OpenAI-compatible: single user message carrying the same prompt + article text
+	content, err := b.client.ChatSingle(prompt + "\n\n" + text)
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(out)), nil
+	return strings.TrimSpace(content), nil
 }
 
-func score(title, source, text, scorerPrompt string) (int, error) {
-	input := fmt.Sprintf("Title: %s\nSource: %s\n\n%s", title, source, text)
+func (b *backend) score(title, source, text, scorerPrompt string) (int, error) {
+	input := scoreInput(title, source, text)
+	var content string
+	if b.kind != "openai" {
+		// claude CLI: scorer prompt via -p, article via stdin
+		cmd := exec.Command("claude", "-p", scorerPrompt, "--model", claudeModel)
+		cmd.Stdin = strings.NewReader(input)
+		cmd.Env = stripClaudeCodeEnv()
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return 10, nil // default on failure
+		}
+		content = string(out)
+	} else {
+		out, err := b.client.ChatSingle(scorerPrompt + "\n\n" + input)
+		if err != nil {
+			return 10, nil // default on failure
+		}
+		content = out
+	}
+	return parseScore([]byte(content)), nil
+}
 
-	cmd := exec.Command("claude", "-p", scorerPrompt, "--model", "claude-haiku-4-5-20251001")
-	cmd.Stdin = strings.NewReader(input)
+// batchResult is one element of the JSON array returned by a batched
+// compress+score request.
+type batchResult struct {
+	ID      int    `json:"id"`
+	Summary string `json:"summary"`
+	Score   int    `json:"score"`
+}
+
+// batchSystemPrompt states the batch task once: for every article the model
+// must produce a compressed summary (same rules as the single-article compress
+// prompt) AND a quality score (same rules/range as the scorer prompt), emitted
+// as one JSON object per article.
+func batchSystemPrompt(scorerPrompt string) string {
+	return fmt.Sprintf(`For EACH article in the user message you must produce BOTH:
+
+1. A compressed summary following these rules:
+%s
+
+2. A quality score following these rules and the same 1-1000 scoring range:
+%s
+
+Note: in the scoring rules above, ignore single-article output-format instructions such as "SCORE <number>" or "Article to score:" — the required output format is overridden below.
+
+Respond with ONLY a JSON array containing one object per article, no other text:
+[{"id": <article id>, "summary": "<compressed summary>", "score": <integer 1-1000>}]`, compressInstructions, scorerPrompt)
+}
+
+// batchUserContent packs up to N articles into one user message. Each article
+// is headed by an unambiguous "=== ARTICLE <id> ===" marker and separated by a
+// delimiter. Each article's text is sent the same way the single-article path
+// sends it (the raw stored text).
+func batchUserContent(articles []relay.PipelineArticle) string {
+	var b strings.Builder
+	for i, a := range articles {
+		if i > 0 {
+			b.WriteString("\n\n=====NEXT ARTICLE=====\n\n")
+		}
+		fmt.Fprintf(&b, "=== ARTICLE %d ===\n", a.ID)
+		fmt.Fprintf(&b, "Title: %s\n", a.Title)
+		fmt.Fprintf(&b, "Source: %s\n", a.Source)
+		fmt.Fprintf(&b, "Text: %s", a.RawText)
+	}
+	return b.String()
+}
+
+// stripJSONFences removes a surrounding markdown code fence (``` or ```json)
+// from an LLM reply, if present.
+func stripJSONFences(content []byte) []byte {
+	s := strings.TrimSpace(string(content))
+	if !strings.HasPrefix(s, "```") {
+		return []byte(s)
+	}
+	// Drop the opening fence line.
+	if idx := strings.Index(s, "\n"); idx >= 0 {
+		s = s[idx+1:]
+	} else {
+		s = ""
+	}
+	// Drop a trailing fence line if present.
+	if idx := strings.LastIndex(s, "```"); idx >= 0 {
+		s = s[:idx]
+	}
+	return []byte(strings.TrimSpace(s))
+}
+
+// parseBatchResponse strictly parses the JSON array returned for a batch. Pairing
+// is by article id: results with an unknown id are ignored (logged), duplicate
+// ids keep only the first occurrence (logged), and the score is clamped/defaulted
+// with the same semantics as parseScore. A batchResult is only produced for ids
+// that were in the request; the caller decides what to do for ids it expected but
+// did not receive (they are left pending).
+func parseBatchResponse(content []byte, articles []relay.PipelineArticle) (map[int]*batchResult, error) {
+	var results []batchResult
+	if err := json.Unmarshal(stripJSONFences(content), &results); err != nil {
+		return nil, fmt.Errorf("parse batch response: %w", err)
+	}
+	if results == nil {
+		return nil, fmt.Errorf("parse batch response: empty JSON array")
+	}
+
+	expected := make(map[int]bool, len(articles))
+	for _, a := range articles {
+		expected[a.ID] = true
+	}
+
+	out := make(map[int]*batchResult, len(articles))
+	for i := range results {
+		r := &results[i]
+		if !expected[r.ID] {
+			log.Printf("batch: ignoring result for unknown article id %d", r.ID)
+			continue
+		}
+		if _, dup := out[r.ID]; dup {
+			log.Printf("batch: ignoring duplicate result for article id %d", r.ID)
+			continue
+		}
+		// Same clamp/default semantics as parseScore.
+		if r.Score < 1 {
+			r.Score = 10
+		}
+		if r.Score > 1000 {
+			r.Score = 1000
+		}
+		out[r.ID] = r
+	}
+	return out, nil
+}
+
+// batchCompressScore sends the whole batch as a single request. If the reply is
+// malformed JSON, the request is retried once; if it is still malformed an error
+// is returned so the caller leaves every article in the batch pending.
+func (b *backend) batchCompressScore(articles []relay.PipelineArticle, scorerPrompt string) (map[int]*batchResult, error) {
+	if b.kind != "openai" {
+		return nil, fmt.Errorf("batch processing requires the openai backend")
+	}
+	system := batchSystemPrompt(scorerPrompt)
+	user := batchUserContent(articles)
+
+	var (
+		content string
+		err     error
+	)
+	for attempt := 1; attempt <= 2; attempt++ {
+		content, err = b.client.ChatJSON(system, user)
+		if err != nil {
+			// Request-level failure (network/API): leave the whole batch pending.
+			return nil, fmt.Errorf("batch request failed: %w", err)
+		}
+		res, perr := parseBatchResponse([]byte(content), articles)
+		if perr == nil {
+			return res, nil
+		}
+		if attempt == 2 {
+			return nil, fmt.Errorf("batch response malformed after retry: %v", perr)
+		}
+		log.Printf("batch: malformed response, retrying whole batch: %v", perr)
+	}
+	return nil, fmt.Errorf("batch unreachable")
+}
+
+func stripClaudeCodeEnv() []string {
 	env := os.Environ()
 	filtered := make([]string, 0, len(env))
 	for _, e := range env {
@@ -280,26 +485,23 @@ func score(title, source, text, scorerPrompt string) (int, error) {
 			filtered = append(filtered, e)
 		}
 	}
-	cmd.Env = filtered
+	return filtered
+}
 
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return 10, nil // default on failure
-	}
-
+func parseScore(out []byte) int {
 	re := regexp.MustCompile(`SCORE (\d+)`)
 	m := re.FindSubmatch(out)
 	if m == nil {
-		return 10, nil
+		return 10
 	}
 	mass, err := strconv.Atoi(string(m[1]))
 	if err != nil || mass < 1 {
-		return 10, nil
+		return 10
 	}
 	if mass > 1000 {
 		mass = 1000
 	}
-	return mass, nil
+	return mass
 }
 
 func loadScorerPrompt(path string) string {
@@ -439,7 +641,14 @@ func processCmd(args []string) {
 	limit := fs.Int("limit", 0, "Max articles to process (0 = all)")
 	dryRun := fs.Bool("dry-run", false, "Preview without processing")
 	scorer := fs.String("scorer", "skills/scorer.md", "Path to scorer prompt")
+	llmFlag := fs.String("llm", "claude", "LLM backend for compress/score: claude or openai")
+	batchSize := fs.Int("batch", 1, "Articles per LLM request (1 = one request per article)")
 	fs.Parse(args)
+
+	backend, err := newBackend(*llmFlag)
+	if err != nil {
+		log.Fatalf("llm backend: %v", err)
+	}
 
 	// Log to ~/Library/Logs/read/process.log
 	logPath := processLogPath()
@@ -488,6 +697,93 @@ func processCmd(args []string) {
 	var compressed, posted, skipped int
 	total := len(articles)
 
+	if *batchSize > 1 && backend.kind != "openai" {
+		fmt.Fprintf(os.Stderr, "warning: --batch is only supported with --llm openai; processing one article per request\n")
+	}
+
+	compressed, posted, skipped = processArticles(store, emb, backend, logger, articles, scorerPrompt, *batchSize)
+
+	fmt.Fprintf(os.Stderr, "\r[%d/%d] compressed: %d posted: %d skipped: %d\n", total, total, compressed, posted, skipped)
+	logger.Printf("process done: compressed=%d posted=%d skipped=%d", compressed, posted, skipped)
+}
+
+// processArticles runs the compress+score+post pipeline over the given articles.
+// With batchSize > 1 and an openai backend it packs up to batchSize articles into
+// a single request; otherwise it uses the original one-request-per-article path.
+func processArticles(store *relay.RelayStore, emb embedding.Embedder, backend *backend, logger *log.Logger, articles []relay.PipelineArticle, scorerPrompt string, batchSize int) (compressed, posted, skipped int) {
+	total := len(articles)
+
+	if batchSize > 1 && backend.kind == "openai" {
+		for i := 0; i < len(articles); {
+			end := i + batchSize
+			if end > len(articles) {
+				end = len(articles)
+			}
+			group := articles[i:end]
+			i = end
+			fmt.Fprintf(os.Stderr, "\r[%d/%d] compressed: %d posted: %d skipped: %d", i, total, compressed, posted, skipped)
+
+			// Per-article paywall filtering stays BEFORE batching.
+			var batch []relay.PipelineArticle
+			for _, a := range group {
+				if isPaywall(a.RawText) {
+					store.UpdateArticleStatus(a.ID, "skipped", "paywall", "", 0)
+					logger.Printf("SKIP paywall: %s", a.Title)
+					skipped++
+					continue
+				}
+				batch = append(batch, a)
+			}
+			if len(batch) == 0 {
+				continue
+			}
+
+			results, err := backend.batchCompressScore(batch, scorerPrompt)
+			if err != nil {
+				logger.Printf("BATCH ERROR (%d articles left pending): %v", len(batch), err)
+				continue
+			}
+
+			for _, a := range batch {
+				res, ok := results[a.ID]
+				if !ok {
+					// Missing from response: never guess or reassign — leave pending so it retries next run.
+					logger.Printf("PENDING missing from batch response: %s", a.Title)
+					continue
+				}
+
+				comp := strings.TrimSpace(res.Summary)
+				if comp == "" {
+					store.UpdateArticleStatus(a.ID, "skipped", "compression_failed", "", 0)
+					logger.Printf("SKIP compression_failed: %s", a.Title)
+					skipped++
+					continue
+				}
+
+				// Bot refusal check
+				if isBotRefusal(comp) {
+					store.UpdateArticleStatus(a.ID, "skipped", "refusal", "", 0)
+					logger.Printf("SKIP refusal: %s", a.Title)
+					skipped++
+					continue
+				}
+
+				// Truncate to 1024 chars
+				if len(comp) > 1024 {
+					comp = comp[:1024]
+				}
+
+				compressed++
+				if finishArticle(store, emb, logger, a, comp, res.Score) {
+					posted++
+				} else {
+					skipped++
+				}
+			}
+		}
+		return
+	}
+
 	for i, a := range articles {
 		fmt.Fprintf(os.Stderr, "\r[%d/%d] compressed: %d posted: %d skipped: %d", i+1, total, compressed, posted, skipped)
 
@@ -500,7 +796,7 @@ func processCmd(args []string) {
 		}
 
 		// Compress
-		comp, err := compress(a.Title, a.Source, a.RawText)
+		comp, err := backend.compress(a.Title, a.Source, a.RawText)
 		if err != nil || comp == "" {
 			store.UpdateArticleStatus(a.ID, "skipped", "compression_failed", "", 0)
 			logger.Printf("SKIP compression_failed: %s", a.Title)
@@ -522,59 +818,65 @@ func processCmd(args []string) {
 		}
 
 		// Score
-		mass, err := score(a.Title, a.Source, a.RawText, scorerPrompt)
+		mass, err := backend.score(a.Title, a.Source, a.RawText, scorerPrompt)
 		if err != nil {
 			mass = 10
 		}
 
-		// Update row with compressed data
-		store.UpdateArticleStatus(a.ID, "compressed", "", comp, mass)
 		compressed++
-
-		// Create post directly
-		var pubAt *time.Time
-		if a.PublishedAt != "" {
-			t, err := time.Parse(time.RFC3339, a.PublishedAt)
-			if err != nil {
-				t, err = time.Parse("2006-01-02", a.PublishedAt)
-			}
-			if err == nil {
-				pubAt = &t
-			}
-		}
-
-		params := relay.PostParams{
-			UserID:      "pipeline",
-			Text:        comp,
-			Title:       a.Title,
-			Link:        a.Link,
-			Mass:        mass,
-			PublishedAt: pubAt,
-		}
-
-		post, err := relay.CreatePost(store, emb, params)
-		if err != nil {
-			store.UpdateArticleStatus(a.ID, "skipped", fmt.Sprintf("post_error: %v", err), comp, mass)
-			logger.Printf("SKIP post_error: %s: %v", a.Title, err)
+		if finishArticle(store, emb, logger, a, comp, mass) {
+			posted++
+		} else {
 			skipped++
-			continue
 		}
+	}
+	return
+}
 
-		// Check if it was a dupe (CreatePost returns existing post on URL match)
-		if post.Link != nil && *post.Link == a.Link {
-			if post.Text != comp {
-				store.UpdateArticleStatus(a.ID, "skipped", "already_posted", comp, mass)
-				logger.Printf("SKIP already_posted: %s", a.Title)
-				skipped++
-				continue
-			}
+// finishArticle records the compressed article and creates the post. It returns
+// true if the article ended up posted, false if it was skipped downstream.
+func finishArticle(store *relay.RelayStore, emb embedding.Embedder, logger *log.Logger, a relay.PipelineArticle, comp string, mass int) bool {
+	// Update row with compressed data
+	store.UpdateArticleStatus(a.ID, "compressed", "", comp, mass)
+
+	// Create post directly
+	var pubAt *time.Time
+	if a.PublishedAt != "" {
+		t, err := time.Parse(time.RFC3339, a.PublishedAt)
+		if err != nil {
+			t, err = time.Parse("2006-01-02", a.PublishedAt)
 		}
-
-		store.UpdateArticleStatus(a.ID, "posted", "", comp, mass)
-		logger.Printf("POSTED [score=%d] %s: %s (%s) date=%s compressed=%d chars", mass, a.Source, a.Title, a.Link, a.PublishedAt, len(comp))
-		posted++
+		if err == nil {
+			pubAt = &t
+		}
 	}
 
-	fmt.Fprintf(os.Stderr, "\r[%d/%d] compressed: %d posted: %d skipped: %d\n", total, total, compressed, posted, skipped)
-	logger.Printf("process done: compressed=%d posted=%d skipped=%d", compressed, posted, skipped)
+	params := relay.PostParams{
+		UserID:      "pipeline",
+		Text:        comp,
+		Title:       a.Title,
+		Link:        a.Link,
+		Mass:        mass,
+		PublishedAt: pubAt,
+	}
+
+	post, err := relay.CreatePost(store, emb, params)
+	if err != nil {
+		store.UpdateArticleStatus(a.ID, "skipped", fmt.Sprintf("post_error: %v", err), comp, mass)
+		logger.Printf("SKIP post_error: %s: %v", a.Title, err)
+		return false
+	}
+
+	// Check if it was a dupe (CreatePost returns existing post on URL match)
+	if post.Link != nil && *post.Link == a.Link {
+		if post.Text != comp {
+			store.UpdateArticleStatus(a.ID, "skipped", "already_posted", comp, mass)
+			logger.Printf("SKIP already_posted: %s", a.Title)
+			return false
+		}
+	}
+
+	store.UpdateArticleStatus(a.ID, "posted", "", comp, mass)
+	logger.Printf("POSTED [score=%d] %s: %s (%s) date=%s compressed=%d chars", mass, a.Source, a.Title, a.Link, a.PublishedAt, len(comp))
+	return true
 }
