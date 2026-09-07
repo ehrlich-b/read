@@ -34,7 +34,7 @@
 {{define "content"}}
 <div class="about-header">
 <h1>about</h1>
-<p>read.ehrlich.dev is an AI-curated RSS reader built by <a href="https://ehrlich.dev" target="_blank" rel="noopener">Bryan Ehrlich</a>. Articles are fetched from <span class="stat">{{.TotalFeeds}}</span> RSS feeds, compressed and scored by Claude, embedded for semantic similarity, and assigned to topic spaces. No human curation — the AI reads everything so you don't have to.</p>
+<p>read.ehrlich.dev is an AI-curated RSS reader built by <a href="https://ehrlich.dev" target="_blank" rel="noopener">Bryan Ehrlich</a>. Articles are fetched from <span class="stat">{{.TotalFeeds}}</span> RSS feeds. An LLM compresses and scores each article, and embeddings assign it to topic spaces. Ranking and topic assignment are automated; the source list is visible below. The model and provider may change as the pipeline evolves.</p>
 <p style="margin-top:8px"><a href="https://github.com/ehrlich-b/read" target="_blank" rel="noopener">source on github</a> · <a href="/w/all">&larr; back to feed</a></p>
 </div>
 <div class="feed-sections">
